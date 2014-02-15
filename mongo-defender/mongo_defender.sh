@@ -86,6 +86,11 @@ while true ; do
      fail_count_inc=$[fail_count_inc+1]
   fi
 
+  if [[ $check_positive = true && $track > 0 ]]; then
+     track=0
+     status="GOOD"
+  fi 
+
   if [[ $check_positive = false && $STATE_GOOD = true ]]; then
      track=$[track+1]
      if [ $track -eq $V ]; then
