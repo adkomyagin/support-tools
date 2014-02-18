@@ -5,17 +5,34 @@
 # T - period of checks (seconds)
 # t - ping timeout (seconds)
 # V - number of failed checks in a row to consider remote network down
-#
+# PROTECTED - array of hosts to protect
 
 declare -a HOSTS=( 'ya.ru' 'mail.ru' )
 T=5
 t=2
 V=3
 
-# the host block function
+declare -a PROTECTED=( 'ololo.com' )
+
+# the host act function
+# $1 - host name
+# $2 - rule action (D/A)
+#
+host_act()
+{
+    for IP in ${HOSTS[@]}; do
+        ssh -i ~/.ssh/CS7135.pem ec2-user@$1 "sudo iptables -$2 OUTPUT -d $IP -j REJECT --reject-with tcp-reset"
+    done
+}
+
+# the host block functions
 #
 block_hosts()
 {
+    for PIP in ${PROTECTED[@]}; do
+        host_act $PIP "A"
+    done
+
     return 0
 }
 
@@ -23,6 +40,10 @@ block_hosts()
 #
 unblock_hosts()
 {
+    for PIP in ${PROTECTED[@]}; do
+        host_act $PIP "D"
+    done
+
     return 0
 }
 
