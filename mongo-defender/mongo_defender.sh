@@ -87,6 +87,13 @@ status="GOOD"
 fail_count_inc=0
 succ_count_inc=0
 
+echo -n "Initial host unblock... "
+if `unblock_hosts`; then
+    echo "Success"
+else
+    echo "Fail"
+fi
+
 while true ; do
 
   check_positive=false
