@@ -25,7 +25,7 @@ host_act()
     done
 }
 
-# the host block functions
+# the host block function
 #
 block_hosts()
 {
@@ -75,6 +75,7 @@ trap 'on_usr' USR1
 echo "Started mongo-defender with PID# $$"
 echo "Monitoring hosts: ${HOSTS[@]}"
 echo "T=$T, t=$t, V=$V"
+echo "Protecting hosts: ${PROTECTED[@]}"
 echo "------------------------------"
 
 # Loop forever, checking the health of the system
