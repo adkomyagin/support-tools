@@ -12,7 +12,7 @@ T=5
 t=2
 V=3
 
-declare -a PROTECTED=( 'ololo.com' )
+declare -a PROTECTED=( 'ec2-23-20-177-157.compute-1.amazonaws.com' )
 
 # the host act function
 # $1 - host name
@@ -21,7 +21,7 @@ declare -a PROTECTED=( 'ololo.com' )
 host_act()
 {
     for IP in ${HOSTS[@]}; do
-        ssh -i ~/.ssh/CS7135.pem ec2-user@$1 "sudo iptables -$2 OUTPUT -d $IP -j REJECT --reject-with tcp-reset"
+        ssh -qt -i /Users/alexander/.ssh/CS7135.pem ec2-user@$1 "sudo /sbin/iptables -$2 OUTPUT -p tcp -d $IP -j REJECT --reject-with tcp-reset" 1>&2
     done
 }
 
