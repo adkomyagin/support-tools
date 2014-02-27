@@ -14,15 +14,30 @@ V=3
 
 declare -a PROTECTED=( 'ec2-23-20-177-157.compute-1.amazonaws.com' )
 
-# the host act function
+# the host block function
 # $1 - host name
-# $2 - rule action (D/A)
 #
-host_act()
+host_block()
 {
-    for IP in ${HOSTS[@]}; do
-        ssh -qt -i /Users/alexander/.ssh/CS7135.pem ec2-user@$1 "sudo /sbin/iptables -$2 OUTPUT -p tcp -d $IP -j REJECT --reject-with tcp-reset" 1>&2
-    done
+ssh -qt -i /Users/alexander/.ssh/CS7135.pem ec2-user@$1 <<'ENDSSH'
+#commands to run on remote host
+for IP in ${HOSTS[@]}; do
+   ! sudo /sbin/iptables -C OUTPUT -p tcp -d $IP -j REJECT --reject-with tcp-reset &>/dev/null  && sudo /sbin/iptables -A OUTPUT -p tcp -d $IP -j REJECT --reject-with tcp-reset 1>&2
+done
+ENDSSH
+}
+
+# the host unblock function
+# $1 - host name
+#
+host_unblock()
+{
+ssh -qt -i /Users/alexander/.ssh/CS7135.pem ec2-user@$1 <<'ENDSSH'
+#commands to run on remote host
+for IP in ${HOSTS[@]}; do
+   sudo /sbin/iptables -D OUTPUT -p tcp -d $IP -j REJECT --reject-with tcp-reset 1>&2
+done
+ENDSSH
 }
 
 # the host block function
@@ -30,7 +45,7 @@ host_act()
 block_hosts()
 {
     for PIP in ${PROTECTED[@]}; do
-        host_act $PIP "A"
+        host_block $PIP
     done
 
     return 0
@@ -41,7 +56,7 @@ block_hosts()
 unblock_hosts()
 {
     for PIP in ${PROTECTED[@]}; do
-        host_act $PIP "D"
+        host_unblock $PIP
     done
 
     return 0
