@@ -5,12 +5,14 @@
 # T - period of checks (seconds)
 # t - ping timeout (seconds)
 # V - number of failed checks in a row to consider remote network down
+# R - number of failed checks that defines a period with wich we reinforce the blocking rules
 # PROTECTED - array of hosts to protect
 
 declare -a HOSTS=( 'ya.ru' 'mail.ru' )
 T=5
 t=2
 V=3
+R=10
 
 declare -a PROTECTED=( 'ec2-23-20-177-157.compute-1.amazonaws.com' )
 
@@ -135,12 +137,11 @@ while true ; do
      status="GOOD"
   fi 
 
-  if [[ $check_positive = false && $STATE_GOOD = true ]]; then
+  if [[ $check_positive = false ]]; then
      track=$[track+1]
-     if [ $track -eq $V ]; then
-         track=0
+     if [ $track -ge $V && `echo "($track - $V)%$R" | bc` -eq "0" ]; then
          `block_hosts` && STATE_GOOD=false && echo "Blocked!" && status="FAIL"
-     else
+     elif [ $track -lt $V ]
          status="WARNING"
      fi
   elif [[ $check_positive = true && $STATE_GOOD = false ]]; then
