@@ -12,21 +12,20 @@ declare -a HOSTS=( 'ya.ru' 'mail.ru' )
 T=5
 t=2
 V=3
-R=10
+R=3
 
-declare -a PROTECTED=( 'ec2-23-20-177-157.compute-1.amazonaws.com' )
+declare -a PROTECTED=( 'ec2-54-205-92-56.compute-1.amazonaws.com' )
 
 # the host block function
 # $1 - host name
 #
 host_block()
 {
-ssh -qt -i /Users/alexander/.ssh/CS7135.pem ec2-user@$1 <<'ENDSSH'
-#commands to run on remote host
-for IP in ${HOSTS[@]}; do
-   ! sudo /sbin/iptables -C OUTPUT -p tcp -d $IP -j REJECT --reject-with tcp-reset &>/dev/null  && sudo /sbin/iptables -A OUTPUT -p tcp -d $IP -j REJECT --reject-with tcp-reset 1>&2
-done
-ENDSSH
+ssh -qt -i /Users/alexander/.ssh/CS7135.pem ubuntu@$1 "\
+for IP in ${HOSTS[@]}; do \
+   ! sudo /sbin/iptables -C OUTPUT -p tcp -d \$IP -j REJECT --reject-with tcp-reset &>/dev/null  && sudo /sbin/iptables -A OUTPUT -p tcp -d \$IP -j REJECT --reject-with tcp-reset 1>&2 \
+; done \
+"
 }
 
 # the host unblock function
@@ -34,12 +33,11 @@ ENDSSH
 #
 host_unblock()
 {
-ssh -qt -i /Users/alexander/.ssh/CS7135.pem ec2-user@$1 <<'ENDSSH'
-#commands to run on remote host
-for IP in ${HOSTS[@]}; do
-   sudo /sbin/iptables -D OUTPUT -p tcp -d $IP -j REJECT --reject-with tcp-reset 1>&2
-done
-ENDSSH
+ssh -qt -i /Users/alexander/.ssh/CS7135.pem ubuntu@$1 "\
+for IP in ${HOSTS[@]}; do \
+   sudo /sbin/iptables -D OUTPUT -p tcp -d \$IP -j REJECT --reject-with tcp-reset &>/dev/null \
+; done \
+"
 }
 
 # the host block function
@@ -70,15 +68,15 @@ unblock_hosts()
 report_stats()
 {
     if [ $status -eq "0" ]; then
-        echo "$status\tAll good" > /tmp/mongo-def-status
+        echo -e "$status\tAll good" > /tmp/mongo-def-status
     else
-        echo "$status\tNumber of failures: $track (limit: $V)" > /tmp/mongo-def-status
+        echo -e "$status\tNumber of failures: $track (limit: $V)" > /tmp/mongo-def-status
     fi
 }
 
 echo "Started mongo-defender with PID# $$"
 echo "Monitoring hosts: ${HOSTS[@]}"
-echo "T=$T, t=$t, V=$V"
+echo "T=$T, t=$t, V=$V, R=$R"
 echo "Protecting hosts: ${PROTECTED[@]}"
 echo "------------------------------"
 
@@ -118,9 +116,9 @@ while true ; do
 
   if [[ $check_positive = false ]]; then
      track=$[track+1]
-     if [ $track -ge $V && `echo "($track - $V)%$R" | bc` -eq "0" ]; then
+     if [[ $track -ge $V && `echo "($track - $V)%$R" | bc` -eq "0" ]]; then
          `block_hosts` && STATE_GOOD=false && echo "Blocked!" && status="2"
-     elif [ $track -lt $V ]
+     elif [ $track -lt $V ]; then
          status="1"
      fi
   elif [[ $check_positive = true && $STATE_GOOD = false ]]; then
