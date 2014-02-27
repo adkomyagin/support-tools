@@ -69,25 +69,12 @@ unblock_hosts()
 #
 report_stats()
 {
-    echo "Status Code: $status" > /tmp/mongo-def-status
-
-    echo "ping success count: $succ_count_inc" >> /tmp/mongo-def-status
-    echo "ping fail count: $fail_count_inc" >> /tmp/mongo-def-status
-    echo "total ping count: $[succ_count_inc+fail_count_inc]" >> /tmp/mongo-def-status
+    if [ $status -eq "0" ]; then
+        echo "$status\tAll good" > /tmp/mongo-def-status
+    else
+        echo "$status\tNumber of failures: $track (limit: $V)" > /tmp/mongo-def-status
+    fi
 }
-
-# reset incremental counters
-#
-on_usr()
-{
-    succ_count_inc=0
-    fail_count_inc=0
-}
-
-
-# Execute function on_usr() receiving USR1 signal
-#
-trap 'on_usr' USR1
 
 echo "Started mongo-defender with PID# $$"
 echo "Monitoring hosts: ${HOSTS[@]}"
@@ -101,9 +88,7 @@ echo "------------------------------"
 track=0
 STATE_GOOD=true
 
-status="GOOD"
-fail_count_inc=0
-succ_count_inc=0
+status="0" #0 for good, 1 for warning, 2 for fail
 
 echo -n "Initial host unblock... "
 if `unblock_hosts`; then
@@ -126,26 +111,20 @@ while true ; do
      fi
   done;
 
-  if [[ $check_positive = true ]]; then
-     succ_count_inc=$[succ_count_inc+1]
-  else
-     fail_count_inc=$[fail_count_inc+1]
-  fi
-
   if [[ $check_positive = true && $track > 0 ]]; then
      track=0
-     status="GOOD"
+     status="0"
   fi 
 
   if [[ $check_positive = false ]]; then
      track=$[track+1]
      if [ $track -ge $V && `echo "($track - $V)%$R" | bc` -eq "0" ]; then
-         `block_hosts` && STATE_GOOD=false && echo "Blocked!" && status="FAIL"
+         `block_hosts` && STATE_GOOD=false && echo "Blocked!" && status="2"
      elif [ $track -lt $V ]
-         status="WARNING"
+         status="1"
      fi
   elif [[ $check_positive = true && $STATE_GOOD = false ]]; then
-      `unblock_hosts` && STATE_GOOD=true && echo "Released!" && status="GOOD"
+      `unblock_hosts` && STATE_GOOD=true && echo "Released!" && status="0"
   fi
 
   report_stats
